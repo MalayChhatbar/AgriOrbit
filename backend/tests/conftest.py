@@ -48,6 +48,10 @@ def make_forecast_payload(days: int = 16, precip_by_day: dict[int, float] | None
             "et0_fao_evapotranspiration": [4.5] * days,
             "shortwave_radiation_sum": [20.0] * days,
             "wind_speed_10m_max": [14.0] * days,
+            "relative_humidity_2m_mean": [60.0] * days,
+            "surface_pressure_mean": [990.0] * days,
+            "soil_moisture_0_to_7cm_mean": [0.28] * days,
+            "soil_moisture_7_to_28cm_mean": [0.30] * days,
         },
         "hourly": {
             "time": hourly_times,

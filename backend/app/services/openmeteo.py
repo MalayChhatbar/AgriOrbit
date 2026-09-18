@@ -55,17 +55,19 @@ CURRENT_VARS = [
 
 # Feature schema shared by the Colab training notebook and inference.
 # Order matters — the ONNX model consumes exactly this vector per day.
+# All variables are DAILY means/sums available in BOTH the forecast and the
+# archive APIs under identical names, so train/serve skew is impossible.
 FEATURE_NAMES = [
-    "tmax",       # temperature_2m_max          °C
-    "tmin",       # temperature_2m_min          °C
-    "precip",     # precipitation_sum           mm
-    "et0",        # et0_fao_evapotranspiration  mm
-    "radiation",  # shortwave_radiation_sum     MJ/m²
-    "wind",       # wind_speed_10m_max          km/h
-    "rh",         # relative_humidity_2m        %   (hourly → daily mean)
-    "pressure",   # surface_pressure            hPa (hourly → daily mean)
-    "sm0_1",      # soil_moisture_0_to_1cm      m³/m³ (hourly → daily mean)
-    "sm3_9",      # soil_moisture_3_to_9cm      m³/m³ (hourly → daily mean)
+    "tmax",       # temperature_2m_max            °C
+    "tmin",       # temperature_2m_min            °C
+    "precip",     # precipitation_sum             mm
+    "et0",        # et0_fao_evapotranspiration    mm
+    "radiation",  # shortwave_radiation_sum       MJ/m²
+    "wind",       # wind_speed_10m_max            km/h
+    "rh",         # relative_humidity_2m_mean     %
+    "pressure",   # surface_pressure_mean         hPa
+    "sm0_7",      # soil_moisture_0_to_7cm_mean   m³/m³
+    "sm7_28",     # soil_moisture_7_to_28cm_mean  m³/m³
 ]
 ML_DAILY_VARS = [
     "temperature_2m_max",
@@ -74,12 +76,10 @@ ML_DAILY_VARS = [
     "et0_fao_evapotranspiration",
     "shortwave_radiation_sum",
     "wind_speed_10m_max",
-]
-ML_HOURLY_VARS = [
-    "relative_humidity_2m",
-    "surface_pressure",
-    "soil_moisture_0_to_1cm",
-    "soil_moisture_3_to_9cm",
+    "relative_humidity_2m_mean",
+    "surface_pressure_mean",
+    "soil_moisture_0_to_7cm_mean",
+    "soil_moisture_7_to_28cm_mean",
 ]
 
 _HOURLY_TO_FIELD = {
@@ -100,6 +100,10 @@ _DAILY_TO_FIELD = {
     "et0_fao_evapotranspiration": "et0",
     "shortwave_radiation_sum": "radiation",
     "wind_speed_10m_max": "wind",
+    "relative_humidity_2m_mean": "rh",
+    "surface_pressure_mean": "pressure",
+    "soil_moisture_0_to_7cm_mean": "sm0_7",
+    "soil_moisture_7_to_28cm_mean": "sm7_28",
 }
 
 
@@ -244,14 +248,20 @@ def fetch_forecast(lat: float, lon: float, forecast_days: int = 16) -> dict[str,
 
 
 def fetch_ml_window(lat: float, lon: float, past_days: int = 30) -> list[list[float]]:
-    """Feature matrix of the last `past_days` complete days — model input at inference."""
+    """Feature matrix of the last `past_days` complete days — model input at inference.
+
+    All ten features are daily variables; `rh`/`pressure` use the daily-mean
+    archive variables at training time. At inference the daily means lag by
+    ~4 days, so recent days are completed from the raw hourly series
+    (aggregate_daily reduces them to the same daily mean).
+    """
     payload = _get(
         FORECAST_URL,
         {
             "latitude": lat,
             "longitude": lon,
             "daily": ",".join(ML_DAILY_VARS),
-            "hourly": ",".join(ML_HOURLY_VARS),
+            "hourly": "relative_humidity_2m,surface_pressure",
             "past_days": past_days + 1,
             "forecast_days": 1,
             "timezone": "GMT",

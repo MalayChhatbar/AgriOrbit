@@ -116,7 +116,8 @@ def predict(matrix: list[list[float]]) -> dict[str, Any]:
         _state["output_names"], {_state["input_name"]: x[None, :, :]}
     )
     logits = np.asarray(outputs[0]).reshape(-1)          # [7] rain logits (BCE training)
-    total_mm = float(np.asarray(outputs[1]).reshape(-1)[0])
+    log_total = float(np.asarray(outputs[1]).reshape(-1)[0])
+    total_mm = float(np.expm1(log_total))                # model predicts log1p(mm)
     probs = _sigmoid(logits)
     start = date.today() + timedelta(days=1)
     return {

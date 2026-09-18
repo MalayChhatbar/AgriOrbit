@@ -111,6 +111,44 @@ def test_kb_retrieval_scores_relevant_chunk():
     assert refs and any("rigat" in r["title"].lower() or "frost" in r["title"].lower() for r in refs)
 
 
+def test_ml_predict_with_fake_session(monkeypatch):
+    """predict() applies sigmoid to logits and expm1 to the log-total."""
+    import math
+
+    import numpy as np
+
+    from app.services import ml_forecast
+
+    class FakeSession:
+        def get_inputs(self):
+            class I: name = "features"
+            return [I()]
+
+        def get_outputs(self):
+            class O:  # noqa: D401 - tiny stub
+                def __init__(self, n): self.name = n
+            return [O("rain_logits"), O("log_total_mm")]
+
+        def run(self, outs, feed):
+            x = next(iter(feed.values()))
+            assert x.shape == (1, 30, 10)
+            return [np.zeros((1, 7), dtype=np.float32), np.array([[math.log1p(12.0)]], dtype=np.float32)]
+
+    monkeypatch.setattr(ml_forecast, "_state", {
+        "loaded": True,
+        "session": FakeSession(),
+        "input_name": "features",
+        "output_names": ["rain_logits", "log_total_mm"],
+        "scaler": {"mean": [0.0] * 10, "std": [1.0] * 10, "feature_names": openmeteo.FEATURE_NAMES},
+        "metrics": None,
+        "error": None,
+    })
+    out = ml_forecast.predict([[0.0] * 10] * 30)
+    assert len(out["rain_probabilities"]) == 7
+    assert all(p["probability"] == 0.5 for p in out["rain_probabilities"])
+    assert out["expected_total_mm"] == 12.0
+
+
 def test_granite_falls_back_without_key():
     ctx = {
         "forecast": {"daily": openmeteo.aggregate_daily(make_forecast_payload())},
