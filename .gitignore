@@ -1,0 +1,31 @@
+# ── Internship PDF (personal document, not part of the repo) ────────────────
+"Project Creation & Guideline - AI for Sustainability Virtual Internship July-Sep 2026.pdf"
+*.pdf
+
+# ── Python (backend, managed by uv) ─────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+.ruff_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ── Secrets / environment ───────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Node / bun (frontend) ───────────────────────────────────────────────────
+node_modules/
+dist/
+*.local
+
+# ── Data caches (re-downloadable) ───────────────────────────────────────────
+backend/.cache/
+*.parquet
+
+# ── OS / editors ────────────────────────────────────────────────────────────
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
