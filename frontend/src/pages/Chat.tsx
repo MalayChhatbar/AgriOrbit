@@ -25,6 +25,13 @@ const GREETING: ChatMsg = {
     "Namaste! I'm AgriOrbit's farm advisor. Ask me about rainfall, irrigation timing to your crop, sowing windows, or what an alert means. I answer with your field's live satellite data.",
 }
 
+const QUICK_PROMPTS = [
+  "When should I irrigate this week?",
+  "Is it safe to spray tomorrow morning?",
+  "What does the climate anomaly mean for my crop?",
+  "When is the best sowing window ahead?",
+]
+
 export default function ChatPage() {
   const { lat, lon, crop, name } = useFarm()
   const [messages, setMessages] = React.useState<ChatMsg[]>([GREETING])
@@ -36,8 +43,8 @@ export default function ChatPage() {
     endRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, sending])
 
-  const send = async () => {
-    const text = input.trim()
+  const send = async (preset?: string) => {
+    const text = (preset ?? input).trim()
     if (!text || sending) return
     const history = [...messages.filter((m) => m.role === "user" || m.source).map((m) => ({ role: m.role, content: m.content }))]
     const withUser: ChatMsg[] = [...messages, { role: "user", content: text }]
@@ -109,7 +116,22 @@ export default function ChatPage() {
             </div>
           </ScrollArea>
 
-          <div className="flex items-end gap-2 border-t p-3">
+          <div className="flex flex-col gap-2 border-t p-3">
+            <div className="flex flex-wrap gap-1.5">
+              {QUICK_PROMPTS.map((q) => (
+                <Button
+                  key={q}
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={sending}
+                  onClick={() => void send(q)}
+                >
+                  {q}
+                </Button>
+              ))}
+            </div>
+            <div className="flex items-end gap-2">
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -127,6 +149,7 @@ export default function ChatPage() {
               <SendHorizonal data-icon="inline-start" />
               Send
             </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

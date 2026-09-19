@@ -32,7 +32,7 @@ export interface ClimateInfo {
   classification: "near-normal" | "below-normal" | "above-normal" | "severe-deficit"
   climatology_period: string
   monthly_normals: number[]
-  recent: { date: string; precip: number }[]
+  recent: { date: string; precip: number; cum_obs: number; cum_normal: number }[]
 }
 
 export interface AlertItem {
@@ -53,6 +53,8 @@ export interface AdvisoryBody {
   actions: AdvisoryAction[]
   cautions: string[]
   confidence?: string
+  stage?: string
+  stage_hint?: string
   metrics?: { rain_7d_mm: number; et0_7d_mm: number; water_deficit_mm: number }
 }
 
@@ -77,6 +79,8 @@ export interface Dashboard {
 
 export interface AdvisoryResponse {
   crop: string
+  stage: string
+  language: string
   source: "granite" | "rules"
   advisory: AdvisoryBody | null
   base_advisory: AdvisoryBody
@@ -143,19 +147,21 @@ export const api = {
 
   geocode: (q: string) => request<{ results: GeocodeResult[] }>(`/geocode?q=${encodeURIComponent(q)}`),
 
-  dashboard: (lat: number, lon: number, crop: string) =>
-    request<Dashboard>(`/dashboard?lat=${lat}&lon=${lon}&crop=${encodeURIComponent(crop)}`),
+  dashboard: (lat: number, lon: number, crop: string, stage: string) =>
+    request<Dashboard>(
+      `/dashboard?lat=${lat}&lon=${lon}&crop=${encodeURIComponent(crop)}&stage=${encodeURIComponent(stage)}`
+    ),
 
   mlforecast: (lat: number, lon: number) =>
     request<MLForecast>(`/mlforecast?lat=${lat}&lon=${lon}`),
 
   modelinfo: () => request<ModelInfo>("/modelinfo"),
 
-  advisory: (lat: number, lon: number, crop: string) =>
+  advisory: (lat: number, lon: number, crop: string, stage: string, lang: string) =>
     request<AdvisoryResponse>("/advisory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lat, lon, crop }),
+      body: JSON.stringify({ lat, lon, crop, stage, language: lang }),
     }),
 
   chat: (messages: { role: string; content: string }[], lat: number | null, lon: number | null, crop: string) =>

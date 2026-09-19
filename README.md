@@ -33,12 +33,16 @@ harvest — in language a person, not a meteorologist, understands.
 
 | Feature | Stack | Page |
 | --- | --- | --- |
-| Field picker (search anywhere or click the map) | Open-Meteo geocoding + react-leaflet | Advisory |
+| Field picker (search, GPS, recent fields, click the map) | Open-Meteo geocoding + react-leaflet | Advisory |
 | 16-day hyperlocal forecast + soil moisture ×4 depths | Open-Meteo (ECMWF IFS / GFS) | Advisory |
-| 30-year ERA5 climate anomaly (“this spell vs history”) | Open-Meteo archive | Advisory |
+| 30-year ERA5 climate anomaly + “season vs normal” cumulative chart | Open-Meteo archive | Advisory |
+| **Growth-stage-aware advice** (planning → harvest re-prioritises actions) | Rules engine stage modelling | Advisory |
 | **Neural rain model** (next-7-day rain probabilities + expected mm) | PyTorch LSTM → ONNX, trained on ERA5 1991–2024 @ 28 Indian stations | Advisory |
-| **AI crop advisory** in plain language | IBM Granite (NVIDIA API) grounded in a deterministic rules engine | Advisory |
-| **Chat assistant** with agronomy knowledge base (RAG) | IBM Granite + keyword RAG | Chat |
+| **AI crop advisory** in plain language, **English / हिंदी** | IBM Granite (NVIDIA API) grounded in a deterministic rules engine | Advisory |
+| **Download advisory as Markdown** (share on WhatsApp) | client-side export | Advisory |
+| Growing-degree-days (GDD) outlook chip | derived client-side | Advisory |
+| **Chat assistant** with agronomy knowledge base (RAG) + quick prompts | IBM Granite + keyword RAG | Chat |
+| Sidebar live system status (API / Granite / model) + theme toggle | `/api/health` polling | everywhere |
 | SDG mapping, model card, Responsible AI section | — | About |
 
 No API key is needed for weather data. **Without `NVIDIA_API_KEY`, advisory + chat run on the

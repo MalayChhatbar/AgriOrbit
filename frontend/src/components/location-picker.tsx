@@ -22,7 +22,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 
 export function LocationPicker() {
-  const { name, lat, lon, setLocation } = useFarm()
+  const { name, lat, lon, setLocation, recents } = useFarm()
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
   const [results, setResults] = React.useState<GeocodeResult[]>([])
@@ -98,6 +98,22 @@ export function LocationPicker() {
                   Use my current location
                 </CommandItem>
               </CommandGroup>
+              {query.trim().length < 2 && recents.length > 0 && (
+                <CommandGroup heading="Recent fields">
+                  {recents.map((r) => (
+                    <CommandItem
+                      key={`${r.lat}-${r.lon}`}
+                      onSelect={() => {
+                        setLocation(r.lat, r.lon, r.name)
+                        setOpen(false)
+                      }}
+                    >
+                      <MapPin />
+                      <span className="truncate">{r.name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
               {results.length > 0 && (
                 <CommandGroup heading="Places">
                   {results.map((r) => {

@@ -1,8 +1,9 @@
 import * as React from "react"
-import { Brain, Sparkles, TriangleAlert } from "lucide-react"
+import { Brain, Download, Sparkles, TriangleAlert } from "lucide-react"
 import { toast } from "sonner"
 
 import { api, type AdvisoryResponse } from "@/lib/api"
+import { CROPS, labelFor, STAGES } from "@/lib/crops"
 import { useFarm } from "@/lib/location"
 import {
   Accordion,
@@ -20,19 +21,65 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 
+function toMarkdown(
+  data: AdvisoryResponse,
+  farm: { name: string; lat: number; lon: number }
+): string {
+  const a = data.advisory ?? data.base_advisory
+  const lines = [
+    `# AgriOrbit Advisory — ${farm.name}`,
+    ``,
+    `Generated: ${new Date().toLocaleString()}  `,
+    `Coordinates: ${farm.lat.toFixed(4)}, ${farm.lon.toFixed(4)}  `,
+    `Crop: ${labelFor(CROPS, data.crop)} · Stage: ${labelFor(STAGES, data.stage)}  `,
+    `Source: ${data.source === "granite" ? "IBM Granite (rules-grounded)" : "AgriOrbit rules engine"}`,
+    ``,
+    `## Summary`,
+    a.summary,
+    ``,
+    `## Recommended actions`,
+    ...a.actions.map((x) => `- **${x.day}** — ${x.action}. _${x.reason}_`),
+    ``,
+    `## Cautions`,
+    ...a.cautions.map((c) => `- ${c}`),
+  ]
+  if (a.metrics) {
+    lines.push(
+      ``,
+      `7-day rain: ${a.metrics.rain_7d_mm} mm · ET₀: ${a.metrics.et0_7d_mm} mm · water deficit: ${a.metrics.water_deficit_mm} mm`
+    )
+  }
+  lines.push(
+    ``,
+    `---`,
+    `_AgriOrbit (SDG 2 / SDG 13). Advisory is guidance, not an instruction — verify chemical and dosage decisions with your local agriculture officer._`
+  )
+  return lines.join("\n")
+}
+
 export function AdvisoryCard() {
-  const { lat, lon, crop } = useFarm()
+  const { lat, lon, crop, stage, lang, setLang, name } = useFarm()
   const [data, setData] = React.useState<AdvisoryResponse | null>(null)
   const [loading, setLoading] = React.useState(false)
 
   const generate = async () => {
     setLoading(true)
     try {
-      const res = await api.advisory(lat, lon, crop)
+      const res = await api.advisory(lat, lon, crop, stage, lang)
       setData(res)
-      if (res.source === "rules") {
+      if (res.source === "rules" && lang === "hi") {
+        toast.info("हिंदी लिखने के लिए IBM Granite चाहिए — NVIDIA_API_KEY सेट करें")
+      } else if (res.source === "rules") {
         toast.info("Showing rules-engine advisory — add NVIDIA_API_KEY for IBM Granite phrasing")
       }
     } catch (err) {
@@ -42,10 +89,24 @@ export function AdvisoryCard() {
     }
   }
 
-  // reset when the farm changes so stale advice never lingers
-  React.useEffect(() => setData(null), [lat, lon, crop])
+  // stale advice must never linger after the farm/stage/language changes
+  React.useEffect(() => setData(null), [lat, lon, crop, stage, lang])
 
-  const shown = data?.advisory ?? data?.base_advisory ?? null
+  const download = () => {
+    if (!data) return
+    const blob = new Blob([toMarkdown(data, { name, lat, lon })], {
+      type: "text/markdown;charset=utf-8",
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `agriorbit-advisory-${new Date().toISOString().slice(0, 10)}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success("Advisory saved — ready to share")
+  }
+
+  const shown = data ? (data.advisory ?? data.base_advisory) : null
 
   return (
     <Card>
@@ -58,10 +119,22 @@ export function AdvisoryCard() {
             </Badge>
           )}
           {shown?.confidence && <Badge variant="outline">Confidence: {shown.confidence}</Badge>}
+          <Select value={lang} onValueChange={(v) => v && setLang(v as "en" | "hi")}>
+            <SelectTrigger className="ml-auto w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="hi">हिंदी</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
         <CardDescription>
-          Plain-language advice for <span className="capitalize">{crop}</span>, built from the live forecast,
-          climate anomaly and rule checks. Granite only rephrases rules output — it cannot invent weather data.
+          Plain-language advice for <span className="capitalize">{labelFor(CROPS, crop)}</span> at{" "}
+          <span className="lowercase">{labelFor(STAGES, stage)}</span> stage — built from the live forecast,
+          climate anomaly and rule checks. Granite only rephrases rules output; it cannot invent weather data.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -134,9 +207,15 @@ export function AdvisoryCard() {
               </AccordionItem>
             </Accordion>
 
-            <Button variant="outline" size="sm" onClick={generate} className="w-fit">
-              Regenerate
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={generate}>
+                Regenerate
+              </Button>
+              <Button variant="outline" size="sm" onClick={download}>
+                <Download data-icon="inline-start" />
+                Download as Markdown
+              </Button>
+            </div>
           </>
         )}
       </CardContent>

@@ -1,9 +1,10 @@
 import * as React from "react"
-import { Droplets, Thermometer, TriangleAlert, Wind } from "lucide-react"
+import { Droplets, Sprout, Thermometer, TriangleAlert, Wind } from "lucide-react"
 import { toast } from "sonner"
 import { Area, AreaChart, Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts"
 
 import { api, type Dashboard } from "@/lib/api"
+import { CROPS, STAGES } from "@/lib/crops"
 import { useFarm } from "@/lib/location"
 import { weatherInfo } from "@/lib/weather-codes"
 import { AdvisoryCard } from "@/components/advisory-card"
@@ -30,20 +31,6 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 
-const CROPS = [
-  { id: "wheat", name: "Wheat" },
-  { id: "rice", name: "Rice (paddy)" },
-  { id: "maize", name: "Maize" },
-  { id: "cotton", name: "Cotton" },
-  { id: "sugarcane", name: "Sugarcane" },
-  { id: "soybean", name: "Soybean" },
-  { id: "mustard", name: "Mustard" },
-  { id: "groundnut", name: "Groundnut" },
-  { id: "pulses", name: "Pulses" },
-  { id: "vegetables", name: "Vegetables" },
-  { id: "other", name: "Other / general" },
-]
-
 const rainConfig = {
   precip: { label: "Rain (mm)", color: "var(--chart-1)" },
   prob: { label: "Rain chance (%)", color: "var(--chart-2)" },
@@ -55,6 +42,12 @@ const soilConfig = {
   sm9_27: { label: "9–27 cm", color: "var(--chart-4)" },
 } satisfies ChartConfig
 
+const seasonConfig = {
+  precip: { label: "Daily rain (mm)", color: "var(--chart-2)" },
+  cum_obs: { label: "This season (cumulative)", color: "var(--chart-1)" },
+  cum_normal: { label: "30-year normal (cumulative)", color: "var(--chart-3)" },
+} satisfies ChartConfig
+
 const CLASS_BADGE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   "severe-deficit": "destructive",
   "below-normal": "secondary",
@@ -63,7 +56,7 @@ const CLASS_BADGE: Record<string, "default" | "secondary" | "destructive" | "out
 }
 
 export default function AdvisoryPage() {
-  const { lat, lon, crop, setCrop } = useFarm()
+  const { lat, lon, crop, setCrop, stage, setStage } = useFarm()
   const [data, setData] = React.useState<Dashboard | null>(null)
   const [loading, setLoading] = React.useState(true)
 
@@ -71,14 +64,14 @@ export default function AdvisoryPage() {
     let cancelled = false
     setLoading(true)
     api
-      .dashboard(lat, lon, crop)
+      .dashboard(lat, lon, crop, stage)
       .then((res) => !cancelled && setData(res))
       .catch((err) => !cancelled && toast.error(err instanceof Error ? err.message : "Failed to load dashboard"))
       .finally(() => !cancelled && setLoading(false))
     return () => {
       cancelled = true
     }
-  }, [lat, lon, crop])
+  }, [lat, lon, crop, stage])
 
   if (loading && !data) {
     return (
@@ -107,6 +100,9 @@ export default function AdvisoryPage() {
     sm9_27: d.sm9_27,
   }))
   const clim = data.climate
+  const gdd7 = data.daily
+    .slice(0, 7)
+    .reduce((s, d) => s + Math.max(0, ((d.tmax ?? 0) + (d.tmin ?? 0)) / 2 - 5), 0)
 
   return (
     <div className="flex flex-col gap-4">
@@ -133,20 +129,36 @@ export default function AdvisoryPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2">
               <CardTitle>Right now</CardTitle>
-              <Select value={crop} onValueChange={(v) => v && setCrop(v)}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Crop" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {CROPS.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col gap-1.5">
+                <Select value={crop} onValueChange={(v) => v && setCrop(v)}>
+                  <SelectTrigger className="w-44">
+                    <SelectValue placeholder="Crop" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {CROPS.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <Select value={stage} onValueChange={(v) => v && setStage(v)}>
+                  <SelectTrigger className="w-44">
+                    <SelectValue placeholder="Crop stage" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {STAGES.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -175,7 +187,14 @@ export default function AdvisoryPage() {
                 Wind {Math.round(data.current.wind_speed_10m ?? 0)} km/h · max today{" "}
                 {Math.round(today.wind ?? 0)} km/h
               </span>
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <Sprout className="size-4" />
+                ≈{gdd7.toFixed(0)} °C·d growing-degree-days expected this week
+              </span>
             </div>
+            <p className="border-t pt-3 text-xs text-muted-foreground">
+              {data.base_advisory.stage_hint}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -241,6 +260,49 @@ export default function AdvisoryPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Season so far vs climatology */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle>This season vs 30-year normal</CardTitle>
+            <Badge variant="outline">ERA5 reanalysis</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={seasonConfig} className="h-52 w-full">
+            <ComposedChart data={clim.recent}>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={false}
+                interval={6}
+                tickMargin={8}
+                tickFormatter={(v: string) => v.slice(5)}
+              />
+              <YAxis yAxisId="l" tickLine={false} axisLine={false} width={30} />
+              <YAxis yAxisId="r" orientation="right" tickLine={false} axisLine={false} width={36} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Bar yAxisId="l" dataKey="precip" fill="var(--color-precip)" radius={[1, 1, 0, 0]} />
+              <Line yAxisId="r" dataKey="cum_obs" stroke="var(--color-cum_obs)" strokeWidth={2.2} dot={false} />
+              <Line
+                yAxisId="r"
+                dataKey="cum_normal"
+                stroke="var(--color-cum_normal)"
+                strokeWidth={1.8}
+                strokeDasharray="5 4"
+                dot={false}
+              />
+            </ComposedChart>
+          </ChartContainer>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Bars: each day’s measured rain. Green solid line: how much rain actually fell this season so far.
+            Amber dashed line: what an average year delivers by the same date — the gap is the drought signal.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Soil moisture */}
       <Card>
