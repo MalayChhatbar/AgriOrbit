@@ -4,7 +4,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-OUT = pathlib.Path(__file__).parent / "docs" / "screenshots"
+OUT = pathlib.Path(__file__).resolve().parent.parent / "docs" / "screenshots"
 OUT.mkdir(parents=True, exist_ok=True)
 
 PAGES = [
