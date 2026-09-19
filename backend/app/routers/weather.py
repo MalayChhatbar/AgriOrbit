@@ -39,6 +39,7 @@ def dashboard(
     lat: float = Query(ge=-90, le=90),
     lon: float = Query(ge=-180, le=180),
     crop: str = "other",
+    stage: str = "vegetative",
 ) -> dict:
     """Everything the advisory dashboard renders, in one round trip."""
     try:
@@ -48,7 +49,9 @@ def dashboard(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     alerts = rules.build_alerts(forecast["daily"], climate)
-    advisory = rules.base_advisory(crop, forecast["daily"], climate, forecast.get("current"))
+    advisory = rules.base_advisory(
+        crop, forecast["daily"], climate, forecast.get("current"), stage
+    )
 
     return {
         "location": {
@@ -60,6 +63,7 @@ def dashboard(
             "timezone": forecast["timezone"],
         },
         "crop": crop,
+        "stage": stage,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "current": forecast["current"],
         "daily": forecast["daily"],

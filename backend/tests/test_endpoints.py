@@ -87,6 +87,20 @@ def test_advisory_rules_source(monkeypatch):
     assert body["base_advisory"]["summary"]
 
 
+def test_advisory_accepts_stage_and_language(monkeypatch):
+    monkeypatch.setattr(openmeteo, "fetch_forecast", lambda lat, lon: _forecast_response())
+    monkeypatch.setattr(climate_svc, "compute_climate", lambda lat, lon: dict(CLIMATE))
+    r = client.post(
+        "/api/advisory",
+        json={"lat": 28.6, "lon": 77.2, "crop": "wheat", "stage": "harvest", "language": "hi"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["stage"] == "harvest"
+    assert body["language"] == "hi"
+    assert body["base_advisory"]["stage"] == "harvest"
+
+
 def test_chat_rules_fallback():
     r = client.post(
         "/api/chat",

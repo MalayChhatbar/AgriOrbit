@@ -34,7 +34,11 @@ Respond with STRICT JSON (no markdown fences) with exactly these keys:
   "actions": [{"day": string, "action": string, "reason": string}],   // keep from rules, reworded
   "cautions": [string],   // short caution lines
   "confidence": "low" | "medium" | "high"   // how consistent the signals are
-}"""
+}
+
+If the input sets "output_language" to a non-English language code (e.g. "hi"), write the
+summary / actions / cautions in that language while keeping numbers, units and crop names
+clear. Structure never changes."""
 
 CHAT_SYSTEM = """You are AgriOrbit, a friendly AI farming assistant grounded in satellite weather data.
 
@@ -92,11 +96,12 @@ def _extract_json(text: str) -> dict | None:
     return data
 
 
-def _compact_context(ctx: dict, crop: str) -> dict:
+def _compact_context(ctx: dict, crop: str, language: str = "en") -> dict:
     daily = ctx["forecast"]["daily"][:10]
     climate = ctx["climate"]
-    return {
+    payload = {
         "crop": crop,
+        "growth_stage": ctx.get("stage", "vegetative"),
         "forecast": [
             {
                 "date": d["date"],
@@ -119,14 +124,26 @@ def _compact_context(ctx: dict, crop: str) -> dict:
         "alerts": ctx["alerts"],
         "rules_advisory": ctx["base_advisory"],
     }
+    if "ml" in ctx:
+        ml = ctx["ml"]
+        payload["neural_model"] = {
+            "next_7_days_rain_probability": [
+                p["probability"] for p in ml.get("rain_probabilities", [])
+            ],
+            "expected_total_mm": ml.get("expected_total_mm"),
+            "note": "Independent LSTM trained on ERA5 history; may diverge from the forecast above.",
+        }
+    if language and language != "en":
+        payload["output_language"] = language
+    return payload
 
 
-def generate_advisory(ctx: dict, crop: str) -> dict:
+def generate_advisory(ctx: dict, crop: str, language: str = "en") -> dict:
     client = _client()
     if client is None:
         return {"source": "rules", "advisory": None}
 
-    payload = json.dumps(_compact_context(ctx, crop), indent=2)
+    payload = json.dumps(_compact_context(ctx, crop, language), indent=2)
     text = _complete(client, ADVISORY_SYSTEM, payload)
     if text is None:
         return {"source": "rules", "advisory": None}
@@ -162,7 +179,7 @@ def chat(
     system = CHAT_SYSTEM
     if context is not None:
         system += "\n\nLIVE CONTEXT (authoritative):\n" + json.dumps(
-            _compact_context(context, crop), indent=2
+            _compact_context(context, crop, language="en"), indent=2
         )
     if kb_refs:
         system += "\n\nKNOWLEDGE BASE EXCERPTS:\n" + "\n\n".join(

@@ -11,6 +11,7 @@ class AdvisoryRequest(BaseModel):
     lat: float = Field(ge=-90, le=90)
     lon: float = Field(ge=-180, le=180)
     crop: str = "other"
+    stage: str = "vegetative"
     language: str = "en"
 
 

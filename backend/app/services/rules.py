@@ -24,6 +24,22 @@ CROPS = [
 PONDING_TOLERANT = {"rice"}
 FROST_SENSITIVE = {"mustard", "vegetables", "potato", "pulses"}
 
+CROP_STAGES = [
+    {"id": "planning", "name": "Planning / sowing"},
+    {"id": "vegetative", "name": "Vegetative growth"},
+    {"id": "flowering", "name": "Flowering"},
+    {"id": "grain_filling", "name": "Grain filling"},
+    {"id": "harvest", "name": "Harvest / drying"},
+]
+
+STAGE_HINTS = {
+    "planning": "Planning mode: the sowing window and soil-recharge signals matter most.",
+    "vegetative": "Vegetative mode: steady moisture and weed/pest-scouting weather drive the advice.",
+    "flowering": "Flowering: this is the most water-sensitive stage — moisture stress now directly cuts yield.",
+    "grain_filling": "Grain filling: heat and dry wind shorten grain development; humidity invites disease.",
+    "harvest": "Harvest mode: multi-day dry windows matter most; advice prioritises drying, not sowing.",
+}
+
 
 def _day_label(idx: int, date_str: str) -> str:
     if idx == 0:
@@ -140,8 +156,14 @@ def build_alerts(daily: list[dict], climate: dict) -> list[dict]:
 
 
 def base_advisory(
-    crop: str, daily: list[dict], climate: dict, current: dict | None = None
+    crop: str,
+    daily: list[dict],
+    climate: dict,
+    current: dict | None = None,
+    stage: str = "vegetative",
 ) -> dict:
+    if stage not in STAGE_HINTS:
+        stage = "vegetative"
     week = daily[:7]
     total_rain = sum((d.get("precip") or 0) for d in week)
     deficit = sum(max((d.get("et0") or 0) - (d.get("precip") or 0), 0) for d in week)
@@ -227,6 +249,31 @@ def base_advisory(
     if crop in FROST_SENSITIVE and any((d.get("tmin") or 99) <= 6 for d in week):
         cautions.append("Frost-sensitive crop: keep soil moist before cold nights.")
 
+    # ── growth-stage reshaping ─────────────────────────────────────────────
+    if stage == "planning":
+        pass  # default action mix already leads with the sowing window
+    elif stage == "flowering" and deficit >= 10:
+        actions.insert(
+            0,
+            {
+                "day": "Next 7 days",
+                "action": "Protect flowering with timely irrigation",
+                "reason": f"Flowering is the most water-sensitive stage and a ~{deficit:.0f} mm "
+                "rain shortfall is forecast.",
+            },
+        )
+    elif stage == "grain_filling":
+        if any((d.get("tmax") or 0) >= 35 for d in week):
+            cautions.append(
+                "Heat during grain filling shortens grain development; irrigate to cool the canopy."
+            )
+    elif stage == "harvest":
+        actions = [a for a in actions if "sowing" not in a["action"].lower()]
+        if any((d.get("precip") or 0) >= 5 for d in week[:4]):
+            cautions.insert(
+                0, "Rain within 4 days: speed up harvest or sheet-cover produce and threshing floors."
+            )
+
     direction = "above" if anomaly > 0 else "below"
     summary = (
         f"Expect ~{total_rain:.0f} mm of rain over the next 7 days. The past 30 days ran "
@@ -238,6 +285,8 @@ def base_advisory(
         "actions": actions[:5],
         "cautions": cautions[:5],
         "confidence": "medium",
+        "stage": stage,
+        "stage_hint": STAGE_HINTS[stage],
         "metrics": {
             "rain_7d_mm": round(total_rain, 1),
             "et0_7d_mm": round(sum((d.get("et0") or 0) for d in week), 1),

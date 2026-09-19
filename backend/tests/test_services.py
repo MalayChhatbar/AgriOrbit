@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import date
 
+import pytest
+
 from app.services import climate as climate_svc
 from app.services import kb, openmeteo, rules
 from app.services import granite
@@ -101,6 +103,49 @@ def test_base_advisory_structure(forecast_rows):
     advisory = rules.base_advisory("wheat", forecast_rows, _climate(), None)
     assert {"summary", "actions", "cautions", "confidence", "metrics"} <= advisory.keys()
     assert advisory["metrics"]["rain_7d_mm"] >= 0
+
+
+def test_climate_recent_series_has_cumulative_curves(monkeypatch):
+    _patch_archive(monkeypatch, recent_fn=1.5, clim_fn=2.0)
+    result = climate_svc.compute_climate(28.6, 77.2, today=date(2026, 9, 19))
+    recent = result["recent"]
+    assert len(recent) == 60
+    assert {"date", "precip", "cum_obs", "cum_normal"} <= recent[-1].keys()
+    # cumulative columns must be monotonically non-decreasing
+    obs = [r["cum_obs"] for r in recent]
+    norm = [r["cum_normal"] for r in recent]
+    assert obs == sorted(obs) and norm == sorted(norm)
+    assert obs[-1] == pytest.approx(90.0, abs=0.5)   # 60 days × 1.5 mm
+    assert norm[-1] == pytest.approx(120.0, abs=0.5)  # 60 days × 2 mm
+
+
+def test_harvest_stage_removes_sowing_and_prioritises_dry_windows():
+    # wet spell on day 2 → triggers a sowing window at vegetative default
+    payload = make_forecast_payload(precip_by_day={2: 15.0, 3: 12.0})
+    rows = openmeteo.aggregate_daily(payload)
+    # day-2 must look likely enough to rain for the sow rule (prob ≥ 50)
+    for r in rows:
+        if r["date"].endswith("21"):
+            r["precip_prob"] = 80
+    base = rules.base_advisory("wheat", rows, _climate(), None, stage="planning")
+    assert any("sowing" in a["action"].lower() for a in base["actions"])
+
+    harvest = rules.base_advisory("wheat", rows, _climate(), None, stage="harvest")
+    assert not any("sowing" in a["action"].lower() for a in harvest["actions"])
+    assert harvest["stage"] == "harvest" and harvest["stage_hint"]
+    assert any("Rain within 4 days" in c for c in harvest["cautions"])
+
+
+def test_flowering_stage_prioritises_irrigation(forecast_rows):
+    clim = _climate(classification="below-normal", anomaly_pct=-30.0)
+    dry = [dict(r, precip=0.0, precip_prob=5) for r in forecast_rows]
+    adv = rules.base_advisory("cotton", dry, clim, None, stage="flowering")
+    assert "Protect flowering" in adv["actions"][0]["action"]
+
+
+def test_unknown_stage_falls_back_to_vegetative(forecast_rows):
+    adv = rules.base_advisory("wheat", forecast_rows, _climate(), None, stage="nonsense")
+    assert adv["stage"] == "vegetative"
 
 
 # --------------------------------------------------------------------------- #

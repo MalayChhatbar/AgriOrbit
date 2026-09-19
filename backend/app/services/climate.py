@@ -80,6 +80,31 @@ def compute_climate(
         round(month_sum[m] / month_cnt[m], 2) if month_cnt[m] else 0.0 for m in range(1, 13)
     ]
 
+    # --- per-day climatological mean precip, for cumulative comparisons -----
+    md_sum: dict[tuple[int, int], float] = {}
+    md_cnt: dict[tuple[int, int], int] = {}
+    for d, v in clim_pairs:
+        key = (d.month, d.day)
+        md_sum[key] = md_sum.get(key, 0.0) + v
+        md_cnt[key] = md_cnt.get(key, 0) + 1
+    normal_for_day = lambda d: md_sum[(d.month, d.day)] / md_cnt[(d.month, d.day)] if md_cnt.get((d.month, d.day)) else 0.0
+
+    # recent 60 days annotated with cumulative observed vs cumulative normal
+    recent: list[dict] = []
+    cum_obs = 0.0
+    cum_norm = 0.0
+    for d, v in hist_pairs[-60:]:
+        cum_obs += v
+        cum_norm += normal_for_day(d)
+        recent.append(
+            {
+                "date": d.isoformat(),
+                "precip": round(v, 1),
+                "cum_obs": round(cum_obs, 1),
+                "cum_normal": round(cum_norm, 1),
+            }
+        )
+
     if anomaly_pct <= -40:
         classification = "severe-deficit"
     elif anomaly_pct <= -20:
@@ -100,7 +125,5 @@ def compute_climate(
         "classification": classification,
         "climatology_period": f"{CLIMATOLOGY_START[:4]}-{CLIMATOLOGY_END[:4]}",
         "monthly_normals": monthly_normals,
-        "recent": [
-            {"date": d.isoformat(), "precip": round(v, 1)} for d, v in hist_pairs[-60:]
-        ],
+        "recent": recent,
     }
