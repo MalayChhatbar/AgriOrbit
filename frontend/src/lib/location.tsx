@@ -13,6 +13,7 @@ export interface FarmLocation {
   crop: string
   stage: string
   lang: "en" | "hi"
+  sowingDate: string | null
   recents: RecentField[]
 }
 
@@ -21,6 +22,7 @@ interface FarmContextValue extends FarmLocation {
   setCrop: (crop: string) => void
   setStage: (stage: string) => void
   setLang: (lang: "en" | "hi") => void
+  setSowingDate: (d: string | null) => void
 }
 
 const DEFAULT_FARM: FarmLocation = {
@@ -30,6 +32,7 @@ const DEFAULT_FARM: FarmLocation = {
   crop: "wheat",
   stage: "vegetative",
   lang: "en",
+  sowingDate: null,
   recents: [],
 }
 
@@ -79,10 +82,14 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
   const setCrop = React.useCallback((crop: string) => setFarm((f) => ({ ...f, crop })), [])
   const setStage = React.useCallback((stage: string) => setFarm((f) => ({ ...f, stage })), [])
   const setLang = React.useCallback((lang: "en" | "hi") => setFarm((f) => ({ ...f, lang })), [])
+  const setSowingDate = React.useCallback(
+    (d: string | null) => setFarm((f) => ({ ...f, sowingDate: d })),
+    []
+  )
 
   const value = React.useMemo(
-    () => ({ ...farm, setLocation, setCrop, setStage, setLang }),
-    [farm, setLocation, setCrop, setStage, setLang]
+    () => ({ ...farm, setLocation, setCrop, setStage, setLang, setSowingDate }),
+    [farm, setLocation, setCrop, setStage, setLang, setSowingDate]
   )
 
   return <FarmContext.Provider value={value}>{children}</FarmContext.Provider>

@@ -34,8 +34,11 @@ harvest — in language a person, not a meteorologist, understands.
 | Feature | Stack | Page |
 | --- | --- | --- |
 | Field picker (search, GPS, recent fields, click the map) | Open-Meteo geocoding + react-leaflet | Advisory |
-| 16-day hyperlocal forecast + soil moisture ×4 depths | Open-Meteo (ECMWF IFS / GFS) | Advisory |
+| 7-day strip + 16-day hyperlocal forecast + soil moisture ×4 depths | Open-Meteo (ECMWF IFS / GFS) | Advisory |
 | 30-year ERA5 climate anomaly + “season vs normal” cumulative chart | Open-Meteo archive | Advisory |
+| **Operations planner** — best day per activity (spray / irrigate / sow / harvest) | forecast-derived rules | Advisory |
+| **GDD growth tracker** — sowing date → thermal-time stages with ETAs | ERA5 archive + forecast | Advisory |
+| **Pest & disease outlook** — leaf-wetness / dry-spell risk models | weather-driven rules | Advisory |
 | **Growth-stage-aware advice** (planning → harvest re-prioritises actions) | Rules engine stage modelling | Advisory |
 | **Neural rain model** (next-7-day rain probabilities + expected mm) | PyTorch LSTM → ONNX, trained on ERA5 1991–2024 @ 28 Indian stations | Advisory |
 | **AI crop advisory** in plain language, **English / हिंदी** | IBM Granite (NVIDIA API) grounded in a deterministic rules engine | Advisory |
@@ -127,4 +130,6 @@ SDG mapping, screenshots (`docs/screenshots/`) and this section directly.
 
 Built by **Malay Chhatbar** for the 1M1B × IBM SkillsBuild AI for Sustainability Internship.
 Data: Open-Meteo (ECMWF IFS / NOAA GFS), ERA5/ERA5-Land (Copernicus), OpenStreetMap.
-Models: IBM Granite 3.3 (NVIDIA API) · custom PyTorch LSTM. UI: shadcn registry + ReactBits.
+Models: IBM Granite 3.3 (NVIDIA API) · custom PyTorch LSTM. UI: shadcn registry + ReactBits,
+**Vercel theme** (tweakcn), Geist type. Feature set informed by established precision-ag
+platforms (GDD tracking, disease-risk models, spray windows).

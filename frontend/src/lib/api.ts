@@ -42,6 +42,37 @@ export interface AlertItem {
   day: string | null
 }
 
+export interface PestRisk {
+  id: string
+  name: string
+  kind: "pest" | "disease"
+  risk: "low" | "moderate" | "high"
+  reason: string
+  tip: string
+}
+
+export interface GrowthStage {
+  name: string
+  target_gdd: number
+  reached: boolean
+  eta: string | null
+}
+
+export interface GrowthStatus {
+  crop: string
+  base_temp_c: number
+  sowing_date: string
+  days_since_sowing: number
+  accumulated_gdd: number
+  maturity_gdd: number
+  progress_pct: number
+  current_stage: string
+  next_stage: string | null
+  stages: GrowthStage[]
+  forecast_gdd_7d: number
+  note: string
+}
+
 export interface AdvisoryAction {
   day: string
   action: string
@@ -74,6 +105,7 @@ export interface Dashboard {
   daily: DailyRow[]
   climate: ClimateInfo
   alerts: AlertItem[]
+  pest_risks: PestRisk[]
   base_advisory: AdvisoryBody
 }
 
@@ -154,6 +186,11 @@ export const api = {
 
   mlforecast: (lat: number, lon: number) =>
     request<MLForecast>(`/mlforecast?lat=${lat}&lon=${lon}`),
+
+  growth: (lat: number, lon: number, crop: string, sowingDate: string) =>
+    request<GrowthStatus>(
+      `/growth?lat=${lat}&lon=${lon}&crop=${encodeURIComponent(crop)}&sowing_date=${sowingDate}`
+    ),
 
   modelinfo: () => request<ModelInfo>("/modelinfo"),
 

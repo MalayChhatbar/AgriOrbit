@@ -9,7 +9,11 @@ import { useFarm } from "@/lib/location"
 import { weatherInfo } from "@/lib/weather-codes"
 import { AdvisoryCard } from "@/components/advisory-card"
 import { FarmMap } from "@/components/farm-map"
+import { GrowthCard } from "@/components/growth-card"
 import { NeuralForecast } from "@/components/neural-forecast"
+import { OpsPlanner } from "@/components/ops-planner"
+import { PestCard } from "@/components/pest-card"
+import { WeekStrip } from "@/components/week-strip"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -199,6 +203,9 @@ export default function AdvisoryPage() {
         </Card>
       </div>
 
+      {/* Week at a glance */}
+      <WeekStrip daily={data.daily} />
+
       {/* Alerts */}
       {data.alerts.length > 0 && (
         <div className="grid gap-3 md:grid-cols-2">
@@ -324,6 +331,15 @@ export default function AdvisoryPage() {
           </ChartContainer>
         </CardContent>
       </Card>
+
+      {/* Operations planner */}
+      <OpsPlanner daily={data.daily} />
+
+      {/* Pest risks + growth tracker */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <PestCard risks={data.pest_risks} />
+        <GrowthCard />
+      </div>
 
       {/* Neural model + AI advisory */}
       <div className="grid gap-4 lg:grid-cols-2">

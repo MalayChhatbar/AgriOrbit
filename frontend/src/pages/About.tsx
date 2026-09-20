@@ -132,6 +132,12 @@ export default function AboutPage() {
             </div>
           ))}
         </CardContent>
+        <CardContent className="border-t pt-4 text-xs text-muted-foreground">
+          Feature set follows the instruments mature precision-ag weather platforms ship —
+          GDD/GDU growth tracking, weather-driven disease-risk modeling, spray windows and
+          irrigation scheduling. Market-price feeds and image-based disease scanning remain
+          deliberate future work; this build perfects the weather-intelligence core.
+        </CardContent>
       </Card>
 
       {/* Model card */}
