@@ -40,7 +40,7 @@ export function FarmMap() {
       <CircleMarker
         center={[lat, lon]}
         radius={9}
-        pathOptions={{ color: "#34d399", fillColor: "#34d399", fillOpacity: 0.75, weight: 2 }}
+        pathOptions={{ color: "#0a0a0a", fillColor: "#fafafa", fillOpacity: 0.9, weight: 2.5 }}
       />
     </MapContainer>
   )

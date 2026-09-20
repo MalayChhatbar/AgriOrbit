@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -69,6 +71,37 @@ def test_dashboard(monkeypatch):
     assert body["climate"]["classification"] == "severe-deficit"
     assert any(a["title"] == "Drought watch" for a in body["alerts"])
     assert "metrics" in body["base_advisory"]
+    ids = [p["id"] for p in body["pest_risks"]]
+    assert "fungal" in ids and "sucking-pests" in ids
+
+
+def test_growth_endpoint(monkeypatch):
+    from tests.test_growth_pest import _fake_archive, _fake_forecast
+
+    _fake_archive(monkeypatch)
+    _fake_forecast(monkeypatch)
+    r = client.get(
+        "/api/growth",
+        params={"lat": 28.6, "lon": 77.2, "crop": "wheat", "sowing_date": "2026-07-01"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["crop"] == "wheat"
+    assert {"current_stage", "accumulated_gdd", "stages", "progress_pct"} <= body.keys()
+
+
+def test_growth_endpoint_validation():
+    future = (date.today() + timedelta(days=5)).isoformat()
+    r = client.get(
+        "/api/growth",
+        params={"lat": 28.6, "lon": 77.2, "crop": "wheat", "sowing_date": future},
+    )
+    assert r.status_code == 422
+    r = client.get(
+        "/api/growth",
+        params={"lat": 28.6, "lon": 77.2, "crop": "wheat", "sowing_date": "2020-01-01"},
+    )
+    assert r.status_code == 422
 
 
 def test_dashboard_validation():

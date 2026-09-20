@@ -8,7 +8,8 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.config import get_settings
 from app.services import climate as climate_svc
-from app.services import ml_forecast, openmeteo, rules
+from app.services import growth as growth_svc
+from app.services import ml_forecast, openmeteo, pest, rules
 
 router = APIRouter()
 
@@ -52,6 +53,7 @@ def dashboard(
     advisory = rules.base_advisory(
         crop, forecast["daily"], climate, forecast.get("current"), stage
     )
+    risks = pest.pest_risks(forecast["daily"], climate, crop)
 
     return {
         "location": {
@@ -69,5 +71,29 @@ def dashboard(
         "daily": forecast["daily"],
         "climate": climate,
         "alerts": alerts,
+        "pest_risks": risks,
         "base_advisory": advisory,
     }
+
+
+@router.get("/growth")
+def crop_growth(
+    lat: float = Query(ge=-90, le=90),
+    lon: float = Query(ge=-180, le=180),
+    crop: str = "other",
+    sowing_date: str = Query(pattern=r"^\d{4}-\d{2}-\d{2}$"),
+) -> dict:
+    """GDD-based growth tracker: accumulated thermal time since sowing, stage
+    progress and projected stage ETAs from the live forecast."""
+    from datetime import date as _date
+
+    sow = _date.fromisoformat(sowing_date)
+    today = _date.today()
+    if sow > today:
+        raise HTTPException(status_code=422, detail="Sowing date cannot be in the future")
+    if (today - sow).days > 400:
+        raise HTTPException(status_code=422, detail="Sowing date looks too far in the past (max 400 days)")
+    try:
+        return growth_svc.growth_status(lat, lon, crop, sow, today)
+    except openmeteo.OpenMeteoError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc

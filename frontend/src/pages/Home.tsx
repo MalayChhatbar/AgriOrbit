@@ -23,19 +23,19 @@ const FEATURES = [
     icon: Satellite,
     title: "Satellite truth, anywhere",
     body: "Tap any field on the map — ERA5 reanalysis and the ECMWF/GFS models resolve that exact point: rain, soil moisture at four depths, evapotranspiration.",
-    color: "rgba(52, 211, 153, 0.18)" as const,
+    color: "rgba(255, 255, 255, 0.10)" as const,
   },
   {
     icon: Brain,
     title: "A neural second opinion",
     body: "Our own LSTM, trained on 30+ years of Indian monsoon data, predicts the next 7 days of rain — shown beside the official forecast with honest accuracy metrics.",
-    color: "rgba(96, 165, 250, 0.18)" as const,
+    color: "rgba(255, 255, 255, 0.10)" as const,
   },
   {
     icon: Sprout,
     title: "Advice in plain language",
     body: "IBM Granite turns the numbers into sow / irrigate / spray / harvest guidance a farmer can act on — grounded in a rules engine so it can never invent weather.",
-    color: "rgba(251, 191, 36, 0.18)" as const,
+    color: "rgba(255, 255, 255, 0.10)" as const,
   },
 ]
 
@@ -53,7 +53,7 @@ export default function HomePage() {
         <div className="absolute inset-0">
           <LightRays
             raysOrigin="top-center"
-            raysColor="#34d399"
+            raysColor="#9ca3af"
             raysSpeed={0.9}
             lightSpread={1.1}
             rayLength={1.8}

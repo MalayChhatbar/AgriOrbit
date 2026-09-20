@@ -19,7 +19,7 @@ const SDGS = [
     id: "SDG 2",
     name: "Zero Hunger",
     role: "Primary",
-    color: "var(--chart-3)",
+    color: "#DDA63A", // official UN SDG 2 colour
     targets: [
       "2.3 — double the productivity and incomes of small-scale food producers",
       "2.4 — resilient agricultural practices that strengthen capacity to adapt to extreme weather, drought and flooding",
@@ -30,7 +30,7 @@ const SDGS = [
     id: "SDG 13",
     name: "Climate Action",
     role: "Secondary",
-    color: "var(--chart-2)",
+    color: "#48773E", // official UN SDG 13 colour
     targets: ["13.1 — strengthen resilience and adaptive capacity to climate-related hazards and natural disasters"],
     why: "Erratic monsoons, heatwaves and unseasonal rain are climate hazards. Predicting them locally, and comparing against a 30-year baseline, is exactly 'strengthening resilience'.",
   },
