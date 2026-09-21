@@ -1,5 +1,5 @@
 import * as React from "react"
-import { HashRouter, Route, Routes } from "react-router-dom"
+import { BrowserRouter, Route, Routes } from "react-router-dom"
 import { Satellite } from "lucide-react"
 
 import { LocationPicker } from "@/components/location-picker"
@@ -32,7 +32,7 @@ function PageFallback() {
 
 export default function App() {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <TooltipProvider>
         <SidebarProvider>
           <AppSidebar />
@@ -62,6 +62,6 @@ export default function App() {
           <Toaster position="top-center" />
         </SidebarProvider>
       </TooltipProvider>
-    </HashRouter>
+    </BrowserRouter>
   )
 }

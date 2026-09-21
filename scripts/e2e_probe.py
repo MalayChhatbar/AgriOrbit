@@ -7,7 +7,7 @@ with sync_playwright() as p:
     pg = b.new_page(viewport={"width": 1440, "height": 1000})
     pg.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
     pg.on("pageerror", lambda e: errors.append(str(e)))
-    pg.goto("http://localhost:5173/#/advisory", wait_until="networkidle")
+    pg.goto("http://localhost:5173/advisory", wait_until="networkidle")
     pg.wait_for_selector("text=16-day rainfall forecast", timeout=60000)
     pg.wait_for_selector("text=Operations planner", timeout=30000)
     pg.fill('input[type="date"]', "2026-07-01")

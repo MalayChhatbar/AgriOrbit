@@ -8,10 +8,10 @@ OUT = pathlib.Path(__file__).resolve().parent.parent / "docs" / "screenshots"
 OUT.mkdir(parents=True, exist_ok=True)
 
 PAGES = [
-    ("home", "http://localhost:5173/#/", 4000),
-    ("advisory", "http://localhost:5173/#/advisory", 6000),
-    ("chat", "http://localhost:5173/#/chat", 3000),
-    ("about", "http://localhost:5173/#/about", 3000),
+    ("home", "http://localhost:5173/", 4000),
+    ("advisory", "http://localhost:5173/advisory", 6000),
+    ("chat", "http://localhost:5173/chat", 3000),
+    ("about", "http://localhost:5173/about", 3000),
 ]
 
 console_errors: list[str] = []
